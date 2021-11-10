@@ -1,0 +1,4 @@
+id,time, src_port, src_ip, dst_port, dst_domain, state, protocol
+0,"2021-11-10 14:32:56",9263,"1.2.3.4",443,"www.google.com","accepted","tcp"
+1,"2021-11-10 14:32:56",9264,"1.2.3.4",443,"www.google.com","accepted","tcp"
+2,"2021-11-10 14:35:10",9265,"1.2.3.4",443,"github.com","accepted","tcp"
