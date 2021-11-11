@@ -1,22 +1,41 @@
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
-use serde::{Serialize, Deserialize};
+use rusqlite::{params, Connection, Result};
+use serde::{Deserialize, Serialize};
+use std::env;
+use std::process;
+use std::sync::Arc;
 
-#[derive(Serialize, Deserialize)]
-pub struct HostStatistics {
-    domain: String,
+#[derive(Debug)]
+struct AccessInfo {
+    id: u64,
+    time: String,
+    src_port: Option<u32>,
+    src_ip: Option<String>,
+    dst_port: Option<u32>,
+    dst_domain: Option<String>,
+    state: Option<String>,
+    protocol: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct AccessStatistics {
+    doamin: String,
     count: u64,
-    something: String
 }
 
 #[get("/json")]
-async fn json() -> impl Responder {
-    let a = HostStatistics {
-        domain: "a".to_string(),
-        count: 123,
-        something: "asdasdsad".to_string(),
-    };
-    let mut res = Vec::new();
-    res.push(a);
+async fn json(db_path: web::Data<Arc<String>>) -> impl Responder {
+    // TODO: optimize connection of database
+    let conn = Connection::open(&**db_path.as_ref()).expect("open database error");
+
+    let res: Vec<AccessStatistics>;
+    match get_access_statistics(&conn) {
+        Ok(rv) => res = rv,
+        Err(err) => {
+            println!("{}", err);
+            res = vec![]
+        }
+    }
     HttpResponse::Ok().json(res)
 }
 
@@ -24,10 +43,75 @@ async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
 
+fn get_access_statistics(conn: &Connection) -> Result<Vec<AccessStatistics>, rusqlite::Error> {
+    let mut stmt = conn.prepare(
+        "SELECT dst_domain,
+            COUNT(dst_domain) as cnt
+        FROM access_info
+            WHERE dst_domain is not null
+            GROUP BY dst_domain
+            ORDER BY cnt desc
+        ;",
+    )?;
+    stmt.query_map([], |row| {
+        Ok(AccessStatistics {
+            doamin: row.get(0)?,
+            count: row.get(1)?,
+        })
+    })
+    .and_then(Iterator::collect)
+}
+
+#[allow(unused)]
+fn test_db(db_path: &str) -> Result<()> {
+    let conn = Connection::open(db_path).unwrap();
+    conn.execute(
+        "INSERT INTO access_info(id, time) VALUES(?1, ?2)",
+        params!["1919-10-10 11:12:13"],
+    )?;
+
+    let mut stmt = conn.prepare(
+        "SELECT cast(id as INT),
+                                            time,
+                                            cast(src_port as INT),
+                                            src_ip,
+                                            cast(dst_port as INT),
+                                            dst_domain,
+                                            state,
+                                            protocol
+                                        from access_info;",
+    )?;
+    let access_iter = stmt.query_map([], |row| {
+        Ok(AccessInfo {
+            id: row.get(0)?,
+            time: row.get(1)?,
+            src_port: row.get(2)?,
+            src_ip: row.get(3)?,
+            dst_port: row.get(4)?,
+            dst_domain: row.get(5)?,
+            state: row.get(6)?,
+            protocol: row.get(7)?,
+        })
+    })?;
+
+    for access in access_iter {
+        println!("found access {:?}", access?);
+    }
+    Ok(())
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        println!("{} db_path", args[0]);
+        process::exit(1);
+    }
+    let db_path = web::Data::new(Arc::new(args[1].clone()));
+
+    HttpServer::new(move || {
         App::new()
+            .app_data(db_path.clone())
             .service(json)
             .route("/hey", web::get().to(manual_hello))
     })
@@ -35,4 +119,3 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
-
