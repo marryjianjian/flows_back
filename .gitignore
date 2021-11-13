@@ -2,3 +2,7 @@
 
 # sqlite3
 *.db
+
+# test logs
+access.log
+

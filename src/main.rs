@@ -1,27 +1,12 @@
+mod model;
+mod read_logs;
+
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+pub use model::{AccessInfo, AccessStatistics};
 use rusqlite::{params, Connection, Result};
-use serde::{Deserialize, Serialize};
 use std::env;
 use std::process;
 use std::sync::Arc;
-
-#[derive(Debug)]
-struct AccessInfo {
-    id: u64,
-    time: String,
-    src_port: Option<u32>,
-    src_ip: Option<String>,
-    dst_port: Option<u32>,
-    dst_domain: Option<String>,
-    state: Option<String>,
-    protocol: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct AccessStatistics {
-    doamin: String,
-    count: u64,
-}
 
 #[get("/json")]
 async fn json(db_path: web::Data<Arc<String>>) -> impl Responder {
@@ -29,7 +14,7 @@ async fn json(db_path: web::Data<Arc<String>>) -> impl Responder {
     let conn = Connection::open(&**db_path.as_ref()).expect("open database error");
 
     let res: Vec<AccessStatistics>;
-    match get_access_statistics(&conn) {
+    match get_access_statistics(&conn, 10) {
         Ok(rv) => res = rv,
         Err(err) => {
             println!("{}", err);
@@ -43,7 +28,10 @@ async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
 
-fn get_access_statistics(conn: &Connection) -> Result<Vec<AccessStatistics>, rusqlite::Error> {
+fn get_access_statistics(
+    conn: &Connection,
+    limit: u32,
+) -> Result<Vec<AccessStatistics>, rusqlite::Error> {
     let mut stmt = conn.prepare(
         "SELECT dst_domain,
             COUNT(dst_domain) as cnt
@@ -51,9 +39,10 @@ fn get_access_statistics(conn: &Connection) -> Result<Vec<AccessStatistics>, rus
             WHERE dst_domain is not null
             GROUP BY dst_domain
             ORDER BY cnt desc
-        ;",
+            LIMIT ?1
+            ;",
     )?;
-    stmt.query_map([], |row| {
+    stmt.query_map([limit], |row| {
         Ok(AccessStatistics {
             doamin: row.get(0)?,
             count: row.get(1)?,
