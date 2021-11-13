@@ -4,6 +4,7 @@ use regex::Regex;
 use std::io::BufRead;
 use std::{fs, io};
 
+#[allow(dead_code)]
 fn read_access_info_fron_line(line: &str) -> Option<AccessInfo> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"(?x)
@@ -52,6 +53,7 @@ fn read_access_info_fron_line(line: &str) -> Option<AccessInfo> {
     }
 }
 
+#[allow(dead_code)]
 pub fn read_access_info_from_file(log_path: &str) -> io::Result<Vec<AccessInfo>> {
     let f = fs::File::open(log_path)?;
     let reader = io::BufReader::new(f);
