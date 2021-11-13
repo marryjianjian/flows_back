@@ -44,7 +44,7 @@ fn get_access_statistics(
     )?;
     stmt.query_map([limit], |row| {
         Ok(AccessStatistics {
-            doamin: row.get(0)?,
+            domain: row.get(0)?,
             count: row.get(1)?,
         })
     })

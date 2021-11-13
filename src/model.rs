@@ -14,6 +14,6 @@ pub struct AccessInfo {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccessStatistics {
-    pub doamin: String,
+    pub domain: String,
     pub count: u64,
 }
