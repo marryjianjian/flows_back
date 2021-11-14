@@ -4,7 +4,8 @@ mod model;
 mod read_logs;
 
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
-pub use model::{AccessInfo, AccessStatistics};
+use model::{AccessStatistics};
+use crud::{update_database};
 use redis;
 use rusqlite::Connection;
 use std::env;
@@ -31,16 +32,32 @@ async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
 
+// TODO : config for redis address and db path
+fn consume_redis_and_update_db(db_path : &str) -> Result<usize, rusqlite::Error> {
+    let client = redis::Client::open("redis://127.0.0.1/").expect("client");
+    let records = consumer::read_records(&client).expect("simple read");
+
+    let mut conn = Connection::open(db_path).expect("open database error");
+
+    let updated_records_len = update_database(&mut conn, &records)?;
+
+    Ok(updated_records_len)
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let client = redis::Client::open("redis://127.0.0.1/").expect("client");
-    consumer::read_records(&client).expect("simple read");
 
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         println!("{} db_path", args[0]);
         process::exit(1);
     }
+
+    match consume_redis_and_update_db(&args[1]) {
+        Ok(updated_records_len) => println!("successfully update {} db records from redis", updated_records_len),
+        Err(err) => println!("update db from redis error : \"{}\"", err),
+    }
+
     let db_path = web::Data::new(Arc::new(args[1].clone()));
 
     HttpServer::new(move || {

@@ -2,7 +2,7 @@ use crate::model::{AccessInfo, AccessStatistics};
 use rusqlite::{params, Connection, Result};
 
 #[allow(unused)]
-pub fn update_database(conn: &mut Connection, access_infos: &Vec<AccessInfo>) -> Result<()> {
+pub fn update_database(conn: &mut Connection, access_infos: &Vec<AccessInfo>) -> Result<usize> {
     let tx = conn.transaction()?;
     // stmt need Droped first
     {
@@ -23,7 +23,7 @@ pub fn update_database(conn: &mut Connection, access_infos: &Vec<AccessInfo>) ->
         }
     }
     tx.commit()?;
-    Ok(())
+    Ok(access_infos.len())
 }
 
 #[allow(unused)]

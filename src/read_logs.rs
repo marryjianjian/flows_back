@@ -8,14 +8,14 @@ use std::{fs, io};
 pub fn read_access_info_fron_line(line: &str) -> Option<AccessInfo> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"(?x)
-                                            ([0-9]{4})/([0-9]{2})/([0-9]{2})\s # 1,2,3 yyyy-mm-dd
-                                            ([0-9]{2}:[0-9]{2}:[0-9]{2})\s     # 4, hh:mm:ss
-                                            ((?:\d{1,3}\.){3}\d{1,3}):         # 5, src_ip xxx.xxx.xxx.xxx
-                                            (\d{1,5})\s                        # 6, src_port xxxxx
-                                            (accepted|rejected)\s              # 7, state
-                                            (?:(tcp|udp):                      # 8, protocol
-                                            ([0-9A-Za-z\-.]+):                 # 9, dst_domain
-                                            (\d{1,5})|.+)                      # 10, dst_port
+                                            ([0-9]{4})/([0-9]{1,2})/([0-9]{1,2})\s # 1,2,3 yyyy-mm-dd
+                                            ([0-9]{2}:[0-9]{2}:[0-9]{2})\s         # 4, hh:mm:ss
+                                            ((?:\d{1,3}\.){3}\d{1,3}):             # 5, src_ip xxx.xxx.xxx.xxx
+                                            (\d{1,5})\s                            # 6, src_port xxxxx
+                                            (accepted|rejected)\s                  # 7, state
+                                            (?:(tcp|udp):                          # 8, protocol
+                                            ([0-9A-Za-z\-.]+):                     # 9, dst_domain
+                                            (\d{1,5})|.+)                          # 10, dst_port
                                             ").unwrap();
     }
     match RE.captures(line) {
