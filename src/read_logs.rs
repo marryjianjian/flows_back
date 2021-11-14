@@ -5,7 +5,7 @@ use std::io::BufRead;
 use std::{fs, io};
 
 #[allow(dead_code)]
-fn read_access_info_fron_line(line: &str) -> Option<AccessInfo> {
+pub fn read_access_info_fron_line(line: &str) -> Option<AccessInfo> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"(?x)
                                             ([0-9]{4})/([0-9]{2})/([0-9]{2})\s # 1,2,3 yyyy-mm-dd
