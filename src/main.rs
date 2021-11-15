@@ -44,6 +44,26 @@ fn consume_redis_and_update_db(db_path : &str) -> Result<usize, rusqlite::Error>
     Ok(updated_records_len)
 }
 
+use tokio::time::{self, Duration};
+async fn timerf(path : String) {
+    let mut interval = time::interval(Duration::from_secs(10));
+    let (mut success_times, mut success_records_len) = (0, 0);
+    loop {
+        interval.tick().await;
+        match consume_redis_and_update_db(&path) {
+            Ok(updated_records_len) => {
+                success_times += 1;
+                success_records_len += updated_records_len;
+                if success_times % 8640 == 1 {
+                    println!("successfully update {} db records from redis", success_records_len);
+                    success_records_len = 0;
+                }
+            },
+            Err(err) => println!("update db from redis error : \"{}\"", err),
+        }
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
 
@@ -53,10 +73,7 @@ async fn main() -> std::io::Result<()> {
         process::exit(1);
     }
 
-    match consume_redis_and_update_db(&args[1]) {
-        Ok(updated_records_len) => println!("successfully update {} db records from redis", updated_records_len),
-        Err(err) => println!("update db from redis error : \"{}\"", err),
-    }
+    tokio::spawn(timerf(args[1].clone()));
 
     let db_path = web::Data::new(Arc::new(args[1].clone()));
 
