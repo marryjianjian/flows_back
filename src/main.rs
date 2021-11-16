@@ -8,9 +8,11 @@ use model::{AccessStatistics};
 use crud::{update_database};
 use redis;
 use rusqlite::Connection;
-use std::env;
-use std::process;
 use std::sync::Arc;
+use std::collections::HashMap;
+
+static DEFAULT_REDIS_ADDRESS: &'static str = "redis://127.0.0.1/";
+static DEFAULT_SQLITE_PATH: &'static str = "src/db/access.db";
 
 #[get("/json")]
 async fn json(db_path: web::Data<Arc<String>>) -> impl Responder {
@@ -32,10 +34,9 @@ async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
 
-// TODO : config for redis address and db path
-fn consume_redis_and_update_db(db_path : &str) -> Result<usize, rusqlite::Error> {
-    let client = redis::Client::open("redis://127.0.0.1/").expect("client");
-    let records = consumer::read_records(&client).expect("simple read");
+fn consume_redis_and_update_db(db_path: &str, redis_address: &str) -> Result<usize, rusqlite::Error> {
+    let client = redis::Client::open(redis_address).expect("connect redis failed");
+    let records = consumer::read_records(&client).expect("read records from redis failed");
 
     let mut conn = Connection::open(db_path).expect("open database error");
 
@@ -45,12 +46,12 @@ fn consume_redis_and_update_db(db_path : &str) -> Result<usize, rusqlite::Error>
 }
 
 use tokio::time::{self, Duration};
-async fn timerf(path : String) {
+async fn timerf(db_path: String, redis_address: String) {
     let mut interval = time::interval(Duration::from_secs(10));
     let (mut success_times, mut success_records_len) = (0, 0);
     loop {
         interval.tick().await;
-        match consume_redis_and_update_db(&path) {
+        match consume_redis_and_update_db(&db_path, &redis_address) {
             Ok(updated_records_len) => {
                 success_times += 1;
                 success_records_len += updated_records_len;
@@ -67,15 +68,32 @@ async fn timerf(path : String) {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
 
-    let args: Vec<String> = env::args().collect();
-    if args.len() < 2 {
-        println!("{} db_path", args[0]);
-        process::exit(1);
+    let mut settings = config::Config::default();
+    settings
+        .merge(config::File::with_name("Settings.toml")).unwrap()
+        .merge(config::Environment::with_prefix("APP")).unwrap();
+
+    let (redis_address, sqlite_path) : (String, String);
+    let conf = settings.try_into::<HashMap<String, String>>().unwrap();
+    match conf.get("redis_address") {
+        Some(res) => redis_address = res.to_string(),
+        None => {
+            println!("No redis address, use default : {}", DEFAULT_REDIS_ADDRESS);
+            redis_address = DEFAULT_REDIS_ADDRESS.to_string();
+        }
     }
+    match conf.get("sqlite_path") {
+        Some(res) => sqlite_path = res.to_string(),
+        None => {
+            println!("No sqlite db path, use default : {}", DEFAULT_SQLITE_PATH);
+            sqlite_path = DEFAULT_SQLITE_PATH.to_string();
+        }
+    }
+    println!("{}, {}", redis_address, sqlite_path);
 
-    tokio::spawn(timerf(args[1].clone()));
+    tokio::spawn(timerf(sqlite_path.clone(), redis_address));
 
-    let db_path = web::Data::new(Arc::new(args[1].clone()));
+    let db_path = web::Data::new(Arc::new(sqlite_path));
 
     HttpServer::new(move || {
         App::new()
