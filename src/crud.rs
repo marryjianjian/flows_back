@@ -1,8 +1,11 @@
 use crate::model::{AccessInfo, AccessStatistics};
 use rusqlite::{params, Connection, Result};
 
+pub type Pool = r2d2::Pool<r2d2_sqlite::SqliteConnectionManager>;
+
 #[allow(unused)]
-pub fn update_database(conn: &mut Connection, access_infos: &Vec<AccessInfo>) -> Result<usize> {
+pub fn update_database(conn: &Pool, access_infos: &Vec<AccessInfo>) -> Result<usize> {
+    let mut conn = conn.get().expect("get connection from pool error");
     let tx = conn.transaction()?;
     // stmt need Droped first
     {

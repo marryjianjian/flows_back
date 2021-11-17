@@ -1,7 +1,8 @@
 mod crud;
 mod model;
 mod read_logs;
-use rusqlite::Connection;
+use r2d2;
+use r2d2_sqlite::SqliteConnectionManager;
 use std::{env, process, time};
 
 fn main() {
@@ -12,10 +13,12 @@ fn main() {
     }
 
     let now = time::Instant::now();
-    let mut conn = Connection::open(&args[1]).expect("open database error");
+    let manager = SqliteConnectionManager::file(&args[1]);
+    let pool = r2d2::Pool::new(manager).unwrap();
     let access_infos =
         read_logs::read_access_info_from_file(&args[2]).expect("read log files failed");
-    crud::update_database(&mut conn, &access_infos).expect("update database error");
+
+    crud::update_database(&pool, &access_infos).expect("update database error");
     println!(
         "update database success in {} us",
         now.elapsed().as_micros()
