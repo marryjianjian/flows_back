@@ -27,7 +27,7 @@ async fn json(conf_ctx: web::Data<Arc<ConfigContext>>) -> impl Responder {
     let conn = conf_ctx.pool.get().expect("get connection from pool error");
 
     let res: Vec<AccessStatistics>;
-    match crud::get_access_statistics(&conn, 10) {
+    match crud::get_access_statistics(&conn, 10).await {
         Ok(rv) => res = rv,
         Err(err) => {
             println!("{}", err);
@@ -41,10 +41,10 @@ async fn manual_hello() -> impl Responder {
     HttpResponse::Ok().body("Hey there!")
 }
 
-fn consume_redis_and_update_db(conf_ctx: &ConfigContext) -> Result<usize, rusqlite::Error> {
+async fn consume_redis_and_update_db(conf_ctx: &ConfigContext) -> Result<usize, rusqlite::Error> {
     let records =
         consumer::read_records(&conf_ctx.redis_client).expect("read records from redis failed");
-    let updated_records_len = update_database(&conf_ctx.pool, &records)?;
+    let updated_records_len = update_database(&conf_ctx.pool, &records).await?;
 
     Ok(updated_records_len)
 }
@@ -55,7 +55,7 @@ async fn timerf(conf_ctx: ConfigContext) {
     let (mut success_times, mut success_records_len) = (0, 0);
     loop {
         interval.tick().await;
-        match consume_redis_and_update_db(&conf_ctx) {
+        match consume_redis_and_update_db(&conf_ctx).await {
             Ok(updated_records_len) => {
                 success_times += 1;
                 success_records_len += updated_records_len;

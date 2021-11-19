@@ -4,7 +4,7 @@ use rusqlite::{params, Connection, Result};
 pub type Pool = r2d2::Pool<r2d2_sqlite::SqliteConnectionManager>;
 
 #[allow(unused)]
-pub fn update_database(conn: &Pool, access_infos: &Vec<AccessInfo>) -> Result<usize> {
+pub async fn update_database(conn: &Pool, access_infos: &Vec<AccessInfo>) -> Result<usize> {
     let mut conn = conn.get().expect("get connection from pool error");
     let tx = conn.transaction()?;
     // stmt need Droped first
@@ -30,7 +30,7 @@ pub fn update_database(conn: &Pool, access_infos: &Vec<AccessInfo>) -> Result<us
 }
 
 #[allow(unused)]
-pub fn get_access_statistics(
+pub async fn get_access_statistics(
     conn: &Connection,
     limit: u32,
 ) -> Result<Vec<AccessStatistics>, rusqlite::Error> {
