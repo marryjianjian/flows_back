@@ -3,8 +3,9 @@ mod crud;
 mod model;
 mod read_logs;
 
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use crud::update_database;
+use env_logger;
 use model::AccessStatistics;
 use r2d2;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -74,6 +75,9 @@ async fn timerf(conf_ctx: ConfigContext) {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    std::env::set_var("RUST_LOG", "actix_web=info");
+    env_logger::init();
+
     let mut settings = config::Config::default();
     settings
         .merge(config::File::with_name("Settings.toml"))
@@ -111,6 +115,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(middleware::Logger::default())
             .app_data(web::Data::new(Arc::new(conf_ctx.clone())).clone())
             .service(json)
             .route("/hey", web::get().to(manual_hello))

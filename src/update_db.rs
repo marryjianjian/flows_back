@@ -19,7 +19,9 @@ async fn main() {
     let access_infos =
         read_logs::read_access_info_from_file(&args[2]).expect("read log files failed");
 
-    crud::update_database(&pool, &access_infos).await.expect("update database error");
+    crud::update_database(&pool, &access_infos)
+        .await
+        .expect("update database error");
     println!(
         "update database success in {} us",
         now.elapsed().as_micros()
