@@ -62,7 +62,7 @@ pub async fn get_last_7_days_statistics(
 ) -> Result<Vec<Last7DayStatistics>, rusqlite::Error> {
     let mut conn = conn.get().expect("get connection from pool error");
     let tx = conn.transaction()?;
-    let mut res : Vec<Last7DayStatistics> = Vec::new();
+    let mut res: Vec<Last7DayStatistics> = Vec::new();
 
     // stmt need Droped first
     {
@@ -73,16 +73,16 @@ pub async fn get_last_7_days_statistics(
         )?;
         for i in 0..6 {
             let day = format!("-{} day", i);
-            stmt.query_row(params![ day ], |row| {
+            stmt.query_row(params![day], |row| {
                 match row.get(0) {
                     Ok(date_name) => {
-                        res.push(Last7DayStatistics{
+                        res.push(Last7DayStatistics {
                             date_name: date_name,
                             domain_count: row.get(1)?,
                         });
-                    },
+                    }
                     Err(err) => {
-                        println!{"ignored date({}) err: {}", day, err};
+                        println! {"ignored date({}) err: {}", day, err};
                         //TODO: log here
                     }
                 }
