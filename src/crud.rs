@@ -10,7 +10,8 @@ pub async fn update_database(conn: &Pool, access_infos: &Vec<AccessInfo>) -> Res
     // stmt need Droped first
     {
         let mut stmt = tx.prepare(
-            "INSERT INTO access_info(time, src_port, src_ip, dst_port, dst_domain, state, protocol, tag)
+            "INSERT OR IGNORE INTO
+                access_info(time, src_port, src_ip, dst_port, dst_domain, state, protocol, tag)
                 VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         )?;
         for access_info in access_infos {
