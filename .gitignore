@@ -2,6 +2,7 @@
 
 # sqlite3
 *.db
+*tmp.sql
 
 # test logs
 access.log
