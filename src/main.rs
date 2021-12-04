@@ -6,7 +6,7 @@ mod read_logs;
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use crud::update_database;
 use env_logger;
-use model::AccessStatistics;
+use model::{AccessStatistics, Last7DayStatistics};
 use r2d2;
 use r2d2_sqlite::SqliteConnectionManager;
 use redis;
@@ -23,12 +23,23 @@ struct ConfigContext {
     pool: crud::Pool,
 }
 
-#[get("/json")]
-async fn json(conf_ctx: web::Data<Arc<ConfigContext>>) -> impl Responder {
-    let conn = conf_ctx.pool.get().expect("get connection from pool error");
-
+#[get("/top10domains")]
+async fn top10domains(conf_ctx: web::Data<Arc<ConfigContext>>) -> impl Responder {
     let res: Vec<AccessStatistics>;
-    match crud::get_access_statistics(&conn, 10).await {
+    match crud::get_top_10_domain_statistics(&conf_ctx.pool, 10).await {
+        Ok(rv) => res = rv,
+        Err(err) => {
+            println!("{}", err);
+            res = vec![]
+        }
+    }
+    HttpResponse::Ok().json(res)
+}
+
+#[get("/last7daystatistics")]
+async fn get_last_7_days_statistics(conf_ctx: web::Data<Arc<ConfigContext>>) -> impl Responder {
+    let res: Vec<Last7DayStatistics>;
+    match crud::get_last_7_days_statistics(&conf_ctx.pool).await {
         Ok(rv) => res = rv,
         Err(err) => {
             println!("{}", err);
@@ -117,7 +128,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .app_data(web::Data::new(Arc::new(conf_ctx.clone())).clone())
-            .service(json)
+            .service(top10domains)
+            .service(get_last_7_days_statistics)
             .route("/hey", web::get().to(manual_hello))
     })
     .bind("0.0.0.0:8080")?

@@ -1,4 +1,4 @@
-use crate::model::{AccessInfo, AccessStatistics};
+use crate::model::{AccessInfo, AccessStatistics, Last7DayStatistics};
 use rusqlite::{params, Connection, Result};
 
 pub type Pool = r2d2::Pool<r2d2_sqlite::SqliteConnectionManager>;
@@ -32,10 +32,11 @@ pub async fn update_database(conn: &Pool, access_infos: &Vec<AccessInfo>) -> Res
 }
 
 #[allow(unused)]
-pub async fn get_access_statistics(
-    conn: &Connection,
+pub async fn get_top_10_domain_statistics(
+    conn: &Pool,
     limit: u32,
 ) -> Result<Vec<AccessStatistics>, rusqlite::Error> {
+    let mut conn = conn.get().expect("get connection from pool error");
     let mut stmt = conn.prepare(
         "SELECT dst_domain,
             COUNT(dst_domain) as cnt
@@ -53,6 +54,44 @@ pub async fn get_access_statistics(
         })
     })
     .and_then(Iterator::collect)
+}
+
+#[allow(unused)]
+pub async fn get_last_7_days_statistics(
+    conn: &Pool,
+) -> Result<Vec<Last7DayStatistics>, rusqlite::Error> {
+    let mut conn = conn.get().expect("get connection from pool error");
+    let tx = conn.transaction()?;
+    let mut res : Vec<Last7DayStatistics> = Vec::new();
+
+    // stmt need Droped first
+    {
+        let mut stmt = tx.prepare(
+            "SELECT time, count(time)
+                FROM access_info
+                    WHERE instr(time, date('now', ?1))",
+        )?;
+        for i in 0..6 {
+            let day = format!("-{} day", i);
+            stmt.query_row(params![ day ], |row| {
+                match row.get(0) {
+                    Ok(date_name) => {
+                        res.push(Last7DayStatistics{
+                            date_name: date_name,
+                            domain_count: row.get(1)?,
+                        });
+                    },
+                    Err(err) => {
+                        println!{"ignored date({}) err: {}", day, err};
+                        //TODO: log here
+                    }
+                }
+                Ok(())
+            })?;
+        }
+    }
+    tx.commit()?;
+    Ok(res)
 }
 
 #[allow(unused)]
