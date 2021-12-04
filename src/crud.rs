@@ -10,8 +10,8 @@ pub async fn update_database(conn: &Pool, access_infos: &Vec<AccessInfo>) -> Res
     // stmt need Droped first
     {
         let mut stmt = tx.prepare(
-            "INSERT INTO access_info(time, src_port, src_ip, dst_port, dst_domain, state, protocol)
-                VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT INTO access_info(time, src_port, src_ip, dst_port, dst_domain, state, protocol, tag)
+                VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         )?;
         for access_info in access_infos {
             stmt.execute(params![
@@ -21,7 +21,8 @@ pub async fn update_database(conn: &Pool, access_infos: &Vec<AccessInfo>) -> Res
                 access_info.dst_port,
                 access_info.dst_domain,
                 access_info.state,
-                access_info.protocol
+                access_info.protocol,
+                access_info.tag,
             ])?;
         }
     }
@@ -63,14 +64,15 @@ pub fn test_db(db_path: &str) -> Result<()> {
 
     let mut stmt = conn.prepare(
         "SELECT cast(id as INT),
-                                            time,
-                                            cast(src_port as INT),
-                                            src_ip,
-                                            cast(dst_port as INT),
-                                            dst_domain,
-                                            state,
-                                            protocol
-                                        from access_info;",
+                time,
+                cast(src_port as INT),
+                src_ip,
+                cast(dst_port as INT),
+                dst_domain,
+                state,
+                protocol,
+                tag
+            FROM access_info;",
     )?;
     let access_iter = stmt.query_map([], |row| {
         Ok(AccessInfo {
@@ -82,6 +84,7 @@ pub fn test_db(db_path: &str) -> Result<()> {
             dst_domain: row.get(5)?,
             state: row.get(6)?,
             protocol: row.get(7)?,
+            tag: row.get(8)?,
         })
     })?;
 

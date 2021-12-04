@@ -10,6 +10,7 @@ pub struct AccessInfo {
     pub dst_domain: Option<String>,
     pub state: Option<String>,
     pub protocol: Option<String>,
+    pub tag: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

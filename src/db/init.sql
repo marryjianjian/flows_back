@@ -6,5 +6,7 @@ CREATE TABLE access_info (
     dst_port INT,
     dst_domain TEXT,
     state TEXT,
-    protocol TEXT
+    protocol TEXT,
+    tag TEXT,
+    UNIQUE(time, src_ip, src_port)
 );
