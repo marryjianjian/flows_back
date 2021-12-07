@@ -8,3 +8,9 @@ flow data statistics charts backend
 sudo apt install libsqlite3-dev
 ```
 
+## Configure
+configure file : `Settings.toml`
+```toml
+redis_address = "redis://redis_url/"
+sqlite_path = "path/to/db"
+```

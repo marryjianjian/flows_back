@@ -7,3 +7,6 @@
 # test logs
 access.log
 
+# configure file
+Settings.toml
+
