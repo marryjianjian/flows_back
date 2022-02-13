@@ -6,7 +6,7 @@ mod read_logs;
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use crud::update_database;
 use env_logger;
-use model::{AccessStatistics, Last7DayStatistics};
+use model::{AccessStatistics, DayStatistics};
 use r2d2;
 use r2d2_sqlite::SqliteConnectionManager;
 use redis;
@@ -38,7 +38,7 @@ async fn top10domains(conf_ctx: web::Data<Arc<ConfigContext>>) -> impl Responder
 
 #[get("/last7daystatistics")]
 async fn get_last_7_days_statistics(conf_ctx: web::Data<Arc<ConfigContext>>) -> impl Responder {
-    let res: Vec<Last7DayStatistics>;
+    let res: Vec<DayStatistics>;
     match crud::get_last_7_days_statistics(&conf_ctx.pool).await {
         Ok(rv) => res = rv,
         Err(err) => {

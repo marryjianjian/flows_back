@@ -20,7 +20,7 @@ pub struct AccessStatistics {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Last7DayStatistics {
+pub struct DayStatistics {
     pub date_name: String,
     pub domain_count: u64,
 }
