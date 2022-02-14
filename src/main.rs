@@ -3,7 +3,7 @@ mod crud;
 mod model;
 mod read_logs;
 
-use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, post, middleware, web, App, HttpResponse, HttpServer, Responder};
 use crud::update_database;
 use env_logger;
 use log::{error, info};
@@ -22,6 +22,22 @@ static DEFAULT_SQLITE_PATH: &'static str = "src/db/access.db";
 struct ConfigContext {
     redis_client: redis::Client,
     pool: crud::Pool,
+}
+
+#[post("/daystatistics")]
+async fn daystatistics(
+    conf_ctx: web::Data<Arc<ConfigContext>>,
+    date_strs: web::Json<Vec<String>>
+) -> impl Responder {
+    let res : Vec<DayStatistics>;
+    match crud::get_days_statistics(&conf_ctx.pool, date_strs.clone()).await {
+        Ok(rv) => res = rv,
+        Err(err) => {
+            error!("{}", err);
+            res = vec![]
+        }
+    }
+    HttpResponse::Ok().json(res)
 }
 
 #[get("/top10domains")]
@@ -131,6 +147,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(Arc::new(conf_ctx.clone())).clone())
             .service(top10domains)
             .service(get_last_7_days_statistics)
+            .service(daystatistics)
             .route("/hey", web::get().to(manual_hello))
     })
     .bind("0.0.0.0:8080")?

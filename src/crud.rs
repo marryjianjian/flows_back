@@ -126,7 +126,7 @@ pub async fn get_last_7_days_statistics(
 #[allow(unused)]
 pub async fn get_days_statistics(
     conn: &Pool,
-    date_strs: Vec<&str>,
+    date_strs: Vec<String>,
 ) -> Result<Vec<DayStatistics>, rusqlite::Error> {
     let mut conn = conn.get().expect("get connection from pool error");
     let tx = conn.transaction()?;
@@ -140,7 +140,7 @@ pub async fn get_days_statistics(
                     WHERE instr(time, ?1)",
         )?;
         for date in date_strs.into_iter() {
-            match parse_date(date) {
+            match parse_date(&date) {
                 Some(_) => {}
                 None => {
                     res.push(DayStatistics {
