@@ -1,5 +1,6 @@
 use crate::model::AccessInfo;
 use lazy_static::lazy_static;
+use log::warn;
 use regex::Regex;
 use std::io::BufRead;
 use std::{fs, io};
@@ -53,7 +54,7 @@ pub fn read_access_info_fron_line(line: &str) -> Option<AccessInfo> {
             });
         }
         None => {
-            // println!("captured nothing");
+            warn!("captured nothing");
             return None;
         }
     }

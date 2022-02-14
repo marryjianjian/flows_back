@@ -6,6 +6,7 @@ mod read_logs;
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use crud::update_database;
 use env_logger;
+use log::{error, info};
 use model::{AccessStatistics, DayStatistics};
 use r2d2;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -29,7 +30,7 @@ async fn top10domains(conf_ctx: web::Data<Arc<ConfigContext>>) -> impl Responder
     match crud::get_top_10_domain_statistics(&conf_ctx.pool, 10).await {
         Ok(rv) => res = rv,
         Err(err) => {
-            println!("{}", err);
+            error!("{}", err);
             res = vec![]
         }
     }
@@ -42,7 +43,7 @@ async fn get_last_7_days_statistics(conf_ctx: web::Data<Arc<ConfigContext>>) -> 
     match crud::get_last_7_days_statistics(&conf_ctx.pool).await {
         Ok(rv) => res = rv,
         Err(err) => {
-            println!("{}", err);
+            error!("{}", err);
             res = vec![]
         }
     }
@@ -72,21 +73,21 @@ async fn timerf(conf_ctx: ConfigContext) {
                 success_times += 1;
                 success_records_len += updated_records_len;
                 if success_times % 8640 == 1 {
-                    println!(
+                    info!(
                         "successfully update {} db records from redis",
                         success_records_len
                     );
                     success_records_len = 0;
                 }
             }
-            Err(err) => println!("update db from redis error : \"{}\"", err),
+            Err(err) => info!("update db from redis error : \"{}\"", err),
         }
     }
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "actix_web=info");
+    std::env::set_var("RUST_LOG", "info");
     env_logger::init();
 
     let mut settings = config::Config::default();
@@ -101,18 +102,18 @@ async fn main() -> std::io::Result<()> {
     match conf.get("redis_address") {
         Some(res) => redis_address = res.to_string(),
         None => {
-            println!("No redis address, use default : {}", DEFAULT_REDIS_ADDRESS);
+            info!("No redis address, use default : {}", DEFAULT_REDIS_ADDRESS);
             redis_address = DEFAULT_REDIS_ADDRESS.to_string();
         }
     }
     match conf.get("sqlite_path") {
         Some(res) => sqlite_path = res.to_string(),
         None => {
-            println!("No sqlite db path, use default : {}", DEFAULT_SQLITE_PATH);
+            info!("No sqlite db path, use default : {}", DEFAULT_SQLITE_PATH);
             sqlite_path = DEFAULT_SQLITE_PATH.to_string();
         }
     }
-    println!("{}, {}", redis_address, sqlite_path);
+    info!("{}, {}", redis_address, sqlite_path);
     let manager = SqliteConnectionManager::file(&sqlite_path);
     let pool = r2d2::Pool::new(manager).unwrap();
 

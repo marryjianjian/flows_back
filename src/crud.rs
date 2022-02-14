@@ -1,7 +1,8 @@
 use crate::model::{AccessInfo, AccessStatistics, DayStatistics};
-use rusqlite::{params, Connection, Result};
-use regex::Regex;
 use lazy_static::lazy_static;
+use log::error;
+use regex::Regex;
+use rusqlite::{params, Connection, Result};
 
 pub type Pool = r2d2::Pool<r2d2_sqlite::SqliteConnectionManager>;
 
@@ -17,14 +18,18 @@ lazy_static! {
 pub fn parse_date(date_str: &str) -> Option<(i32, i32, i32)> {
     match DATE_QUERY_FORMAT.captures(date_str) {
         Some(caps) => {
-            let year = caps.get(1).map_or(None, |m| Some(m.as_str().parse::<i32>().unwrap()))?;
-            let month = caps.get(2).map_or(None, |m| Some(m.as_str().parse::<i32>().unwrap()))?;
-            let day = caps.get(3).map_or(None, |m| Some(m.as_str().parse::<i32>().unwrap()))?;
+            let year = caps
+                .get(1)
+                .map_or(None, |m| Some(m.as_str().parse::<i32>().unwrap()))?;
+            let month = caps
+                .get(2)
+                .map_or(None, |m| Some(m.as_str().parse::<i32>().unwrap()))?;
+            let day = caps
+                .get(3)
+                .map_or(None, |m| Some(m.as_str().parse::<i32>().unwrap()))?;
             Some((year, month, day))
-        },
-        None => {
-            None
         }
+        None => None,
     }
 }
 
@@ -107,8 +112,7 @@ pub async fn get_last_7_days_statistics(
                         });
                     }
                     Err(err) => {
-                        println! {"ignored date({}) err: {}", day, err};
-                        //TODO: log here
+                        error!("ignored date({}) err: {}", day, err);
                     }
                 }
                 Ok(())
@@ -122,7 +126,7 @@ pub async fn get_last_7_days_statistics(
 #[allow(unused)]
 pub async fn get_days_statistics(
     conn: &Pool,
-    date_strs: Vec<&str>
+    date_strs: Vec<&str>,
 ) -> Result<Vec<DayStatistics>, rusqlite::Error> {
     let mut conn = conn.get().expect("get connection from pool error");
     let tx = conn.transaction()?;
@@ -137,7 +141,7 @@ pub async fn get_days_statistics(
         )?;
         for date in date_strs.into_iter() {
             match parse_date(date) {
-                Some(_) => {},
+                Some(_) => {}
                 None => {
                     res.push(DayStatistics {
                         date_name: date.to_string(),
@@ -154,8 +158,7 @@ pub async fn get_days_statistics(
                         });
                     }
                     Err(err) => {
-                        println! {"ignored date({}) err: {}", date, err};
-                        //TODO: log here
+                        error!("ignored date({}) err: {}", date, err);
                     }
                 }
                 Ok(())
@@ -219,7 +222,7 @@ mod tests {
 
     #[test]
     fn test_parse_date() {
-        let cases:Vec<(&str, bool, i32, i32, i32)> = vec![
+        let cases: Vec<(&str, bool, i32, i32, i32)> = vec![
             ("1212-12-01", true, 1212, 12, 1),
             ("2021-12-01", true, 2021, 12, 1),
             ("12-01-1234", false, 0, 0, 0),
@@ -232,7 +235,7 @@ mod tests {
                     assert_eq!(c.2, ymd.0);
                     assert_eq!(c.3, ymd.1);
                     assert_eq!(c.4, ymd.2)
-                },
+                }
                 None => {
                     assert_eq!(c.1, false);
                 }
