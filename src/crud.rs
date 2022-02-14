@@ -1,6 +1,6 @@
 use crate::model::{AccessInfo, AccessStatistics, DayStatistics};
 use lazy_static::lazy_static;
-use log::error;
+use log::{error, warn};
 use regex::Regex;
 use rusqlite::{params, Connection, Result};
 
@@ -158,7 +158,11 @@ pub async fn get_days_statistics(
                         });
                     }
                     Err(err) => {
-                        error!("ignored date({}) err: {}", date, err);
+                        warn!("ignored date({}) : {}", date, err);
+                        res.push(DayStatistics {
+                            date_name: date.to_string(),
+                            domain_count: 0,
+                        });
                     }
                 }
                 Ok(())
