@@ -54,7 +54,7 @@ pub fn read_access_info_fron_line(line: &str) -> Option<AccessInfo> {
             });
         }
         None => {
-            warn!("captured nothing");
+            warn!("captured nothing from '{:?}'", line);
             return None;
         }
     }
